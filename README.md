@@ -64,8 +64,8 @@ Your feedback and collaboration are greatly appreciated. Thank you for your inte
 ## Changelog
 
 - **Version 0.2:**
-    - *IP Retrieval Method:* Switched to [**`IPFy`**](ipify.org) for more reliable and unlimited public IP retrieval.
-    - *Geolocation Service:* Updated to use [**`ReallyFreeGeoIP`**](reallyfreegeoip.org) for improved accuracy and no request limits.
+    - *IP Retrieval Method:* Switched to [**`IPFy`**](https://ipify.org) for more reliable and unlimited public IP retrieval.
+    - *Geolocation Service:* Updated to use [**`ReallyFreeGeoIP`**](https://reallyfreegeoip.org) for improved accuracy and no request limits.
     - *Code Optimization:* Reorganized and optimized code structure for better readability and maintainability.
     - *Error Handling:* Implemented robust error handling to gracefully handle exceptions during API requests.
     - *Documentation:* Improved function and class docstrings for better understanding.
