@@ -60,3 +60,12 @@ This project is authored by a dedicated developer who strives to create innovati
 [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/BlackCage) [![Twitter](https://img.shields.io/badge/Twitter-000000?style=for-the-badge&logo=twitter&logoColor=white)](https://twitter.com/BlackByte_) [![ProtonMail](https://img.shields.io/badge/ProtonMail-8B89CC?style=for-the-badge&logo=protonmail&logoColor=white)](mailto:blackcage_faq@proton.me)
 
 Your feedback and collaboration are greatly appreciated. Thank you for your interest in this project.
+
+## Changelog
+
+- **Version 0.2:**
+    - *IP Retrieval Method:* Switched to [**`IPFy`**](ipify.org) for more reliable and unlimited public IP retrieval.
+    - *Geolocation Service:* Updated to use [**`ReallyFreeGeoIP`**](reallyfreegeoip.org) for improved accuracy and no request limits.
+    - *Code Optimization:* Reorganized and optimized code structure for better readability and maintainability.
+    - *Error Handling:* Implemented robust error handling to gracefully handle exceptions during API requests.
+    - *Documentation:* Improved function and class docstrings for better understanding.
