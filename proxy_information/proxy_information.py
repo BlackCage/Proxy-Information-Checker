@@ -1,61 +1,101 @@
 import time
 import random
 import requests
-from fake_useragent import UserAgent as ua
+import concurrent.futures
 
-requests.packages.urllib3.disable_warnings() 
+requests.packages.urllib3.disable_warnings()
 
 class ProxyInformation:
     def __init__(self, timeout=5):
         """
-        ProxyInformation is a tool to verify the information and status of a proxy server.
+        Initializes the ProxyInformation class.
 
-        Attributes:
+        Parameters:
             - timeout (int): The maximum time to wait for a response from the proxy server (default is 5 seconds).
-            - myIP (str): The public IP address of the local machine.
-
-        Methods:
-            - check_proxy(proxy: str) -> dict:
-                Verify the information and status of a proxy server.
-            
-        Example:
-            checker = ProxyInformation(timeout=5)
-            proxy_info = checker.check_proxy("103.88.35.200:1080")
-            print(proxy_info)
         """
         self.myIP = self.__get_myip()
         self.timeout = timeout
 
     def __get_myip(self):
         """
-        Get the public IP address of the local machine using ipinfo.io.
+        Gets the public IP address of the local machine using ipify.org.
 
         Returns:
             str: The public IP address of the local machine.
         """
-        ip = requests.get("https://ipinfo.io/json", headers={"User-Agent": ua().random}).json()["ip"]
-        return ip
-    
+        try:
+            ip = requests.get("https://api.ipify.org?format=json").json()["ip"]
+            return ip
+        except requests.RequestException:
+            return None
+
     def __geolocation(self, ip):
         """
-        Get geolocation information for a given IP address using ipwhois.app.
+        Gets geolocation information for a given IP address using reallyfreegeoip.org.
 
         Args:
             ip (str): The IP address for which geolocation information is requested.
 
         Returns:
-            str: The country of the IP address.
+            str: The country name of the IP address.
             str: The country code of the IP address.
         """
-        info = requests.get(f"https://ipwhois.app/json/{ip}", headers={"User-Agent": ua().random}).json()
+        try:
+            info = requests.get(f"https://reallyfreegeoip.org/json/{ip}").json()
+            country_name = info["country_name"]
+            country_code = info["country_code"]
+            return country_name, country_code
+        except requests.RequestException:
+            return None, None
 
-        country = info["country"]
-        country_code = info["country_code"]
-        return country, country_code
+    def __test_protocol(self, proxy, protocol, sites):
+        """
+        Tests a proxy server for a specific protocol.
+
+        Args:
+            proxy (str): The proxy server in the format "ip:port".
+            protocol (str): The protocol to test (e.g., "http", "socks4", "socks5").
+            sites (list): List of websites to test the proxy against.
+
+        Returns:
+            dict: A dictionary containing information about the proxy server, including its status, response time, anonymity level, country, etc.
+        """
+        proxies = {"http": f"{protocol}://{proxy}", "https": f"{protocol}://{proxy}"}
+
+        try:
+            start = time.time()
+            r = requests.get(random.choice(sites), proxies=proxies, timeout=self.timeout, verify=False)
+            finish = time.time() - start
+
+            info = {
+                "ip": proxy.split(":")[0],
+                "port": proxy.split(":")[1],
+                "protocol": protocol,
+                "responseTime": finish
+            }
+
+            if "HTTP_X_FORWARDED_FOR" in r.text:
+                info["anonymity"] = "Transparent"
+            else:
+                ip, myIP = proxy.split(":")[0], self.myIP
+                if ip not in r.text and myIP not in r.text:
+                    info["anonymity"] = "Elite"
+                if ip in r.text and myIP not in r.text:
+                    info["anonymity"] = "Anonymous"
+
+            country, country_code = self.__geolocation(ip)
+            info.update({
+                "country": country,
+                "country_code": country_code
+            })
+
+            return info
+        except (requests.RequestException, ValueError):
+            return None
 
     def __get_info(self, proxy):
         """
-        Get information and status of a proxy server.
+        Gets information and status of a proxy server by testing multiple protocols.
 
         Args:
             proxy (str): The proxy server in the format "ip:port".
@@ -63,52 +103,25 @@ class ProxyInformation:
         Returns:
             dict: A dictionary containing information about the proxy server, including its status, response time, anonymity level, country, etc.
         """
-        ip, port = proxy.split(":")
+        result = {"status": False}
 
-        result = {}
         protocols = ["http", "socks4", "socks5"]
         sites = ["https://ipinfo.io/json", "http://proxyjudge.us", "http://azenv.net"]
 
-        for protocol in protocols:
-            proxies = {
-                "http": f"{protocol}://{proxy}",
-                "https": f"{protocol}://{proxy}"
-            }
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.__test_protocol, proxy, protocol, sites) for protocol in protocols]
 
-            try:
-                start = time.time()
-                r = requests.get(random.choice(sites), headers={"User-Agent": ua().random}, proxies=proxies, timeout=self.timeout, verify=False)
-                finish = time.time() - start
-
-                result["ip"] = ip
-                result["port"] = port
-                result["protocol"] = protocol
-                result["responseTime"] = finish
-
-                if "HTTP_X_FORWARDED_FOR" in r.text:
-                    result["anonymity"] = "Transparent"
-                else:
-                    if ip not in r.text and self.myIP not in r.text:
-                        result["anonymity"] = "Elite"
-                    if ip in r.text and self.myIP not in r.text:
-                        result["anonymity"] = "Anonymous"
-
-                country, country_code = self.__geolocation(ip)
-                result["country"] = country
-                result["country_code"] = country_code
-
+        for future in concurrent.futures.as_completed(futures):
+            info = future.result()
+            if info:
+                result = {"status": True, "info": info}
                 break
-            except (requests.RequestException, ValueError):
-                pass
 
-        if result == {}:
-            result["status"] = False
-            
         return result
-    
+
     def check_proxy(self, proxy):
         """
-        Verify the information and status of a proxy server.
+        Verifies the information and status of a proxy server by testing multiple protocols.
 
         Args:
             proxy (str): The proxy server in the format "ip:port".
